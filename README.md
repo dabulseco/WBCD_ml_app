@@ -21,9 +21,11 @@ This is a comprehensive machine learning application built with Streamlit that a
 
 ### Model Configuration
 - **Model Type Selection**: Choose between Classification or Regression
-- **Algorithm**: Random Forest (both classifier and regressor)
-- **Hyperparameter Tuning**: Adjust all major parameters with sliders
-  - Number of trees (n_estimators)
+- **Multiple Algorithms**: Select from various ML algorithms via sidebar
+  - **Classification**: Random Forest, Logistic Regression, Gradient Boosting, SVM, Decision Tree, KNN, Naive Bayes
+  - **Regression**: Random Forest, Linear Regression, Ridge, Lasso, Gradient Boosting, SVR, Decision Tree, KNN
+- **Hyperparameter Tuning**: Adjust parameters with sliders
+  - Number of trees (n_estimators) - for tree-based models
   - Maximum depth
   - Minimum samples split
   - Minimum samples leaf
@@ -313,13 +315,39 @@ id,diagnosis,feature1,feature2,feature3,feature4
 
 ## Technical Details
 
-### Algorithm: Random Forest
-Random Forest is chosen as the default algorithm because:
-- **Robust**: Handles both numeric and categorical data
-- **No scaling required**: Works well without feature normalization
-- **Feature importance**: Provides insights into which features matter most
-- **Overfitting resistance**: Ensemble method reduces overfitting
-- **Versatile**: Works for both classification and regression
+### Algorithm: Multiple Options Available
+The application now supports 7 classification and 8 regression algorithms:
+
+**Classification Algorithms:**
+1. **Random Forest** (default) - Ensemble of decision trees, robust and accurate
+2. **Logistic Regression** - Linear model for binary/multiclass classification
+3. **Gradient Boosting** - Sequential ensemble method, often highest accuracy
+4. **Support Vector Machine (SVM)** - Effective in high-dimensional spaces
+5. **Decision Tree** - Simple, interpretable tree-based model
+6. **K-Nearest Neighbors (KNN)** - Instance-based learning algorithm
+7. **Naive Bayes** - Fast probabilistic classifier based on Bayes' theorem
+
+**Regression Algorithms:**
+1. **Random Forest** (default) - Ensemble of decision trees for regression
+2. **Linear Regression** - Simple linear relationship modeling
+3. **Ridge Regression** - Linear regression with L2 regularization
+4. **Lasso Regression** - Linear regression with L1 regularization (feature selection)
+5. **Gradient Boosting** - Sequential ensemble method for regression
+6. **Support Vector Regression (SVR)** - SVM adapted for regression tasks
+7. **Decision Tree** - Simple tree-based regressor
+8. **K-Nearest Neighbors (KNN)** - Instance-based regression
+
+**Which Algorithm to Choose:**
+- **Start with Random Forest** - Good default choice, robust performance
+- **Try Gradient Boosting** - Often achieves best accuracy but slower
+- **Use Logistic/Linear Regression** - When you need interpretability and speed
+- **Try SVM** - When you have complex decision boundaries
+- **Use Lasso** - When you want automatic feature selection
+
+**Algorithm-Specific Features:**
+- **Feature Importance**: Available for tree-based models (Random Forest, Gradient Boosting, Decision Tree)
+- **Probability Predictions**: Available for most classifiers (not SVM by default, but enabled in this app)
+- **ROC Curves**: Only displayed when probability predictions are available
 
 ### Data Preprocessing
 The application automatically:

@@ -19,7 +19,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso
+from sklearn.svm import SVC, SVR
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report, roc_curve, auc,
@@ -414,7 +419,11 @@ def make_predictions(model_package, new_data):
     
     # Get prediction probabilities for classification
     if model_type == "Classification":
-        pred_proba = model.predict_proba(X_new_scaled)
+        # Check if model has predict_proba method
+        if hasattr(model, 'predict_proba'):
+            pred_proba = model.predict_proba(X_new_scaled)
+        else:
+            pred_proba = None
         
         # Decode predictions if target was encoded
         if target_encoder is not None:
@@ -423,6 +432,147 @@ def make_predictions(model_package, new_data):
         pred_proba = None
     
     return predictions, pred_proba
+
+def create_model(algorithm, model_type, n_estimators, max_depth, min_samples_split, 
+                min_samples_leaf, random_state):
+    """
+    Create a machine learning model based on the selected algorithm and type.
+    
+    Parameters:
+    -----------
+    algorithm : str
+        Name of the algorithm to use
+    model_type : str
+        'Classification' or 'Regression'
+    n_estimators : int
+        Number of trees/estimators (for tree-based models)
+    max_depth : int or None
+        Maximum depth of trees
+    min_samples_split : int
+        Minimum samples required to split a node
+    min_samples_leaf : int
+        Minimum samples required at a leaf node
+    random_state : int
+        Random seed for reproducibility
+    
+    Returns:
+    --------
+    model : sklearn model object
+        Configured machine learning model
+    """
+    if model_type == "Classification":
+        if algorithm == "Random Forest":
+            model = RandomForestClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state,
+                n_jobs=-1
+            )
+        elif algorithm == "Logistic Regression":
+            model = LogisticRegression(
+                max_iter=1000,
+                random_state=random_state,
+                n_jobs=-1
+            )
+        elif algorithm == "Gradient Boosting":
+            model = GradientBoostingClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state
+            )
+        elif algorithm == "Support Vector Machine (SVM)":
+            model = SVC(
+                kernel='rbf',
+                probability=True,  # Enable probability estimates
+                random_state=random_state
+            )
+        elif algorithm == "Decision Tree":
+            model = DecisionTreeClassifier(
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state
+            )
+        elif algorithm == "K-Nearest Neighbors (KNN)":
+            model = KNeighborsClassifier(
+                n_neighbors=min(5, min_samples_leaf),  # Use min_samples_leaf as proxy
+                n_jobs=-1
+            )
+        elif algorithm == "Naive Bayes":
+            model = GaussianNB()
+        else:
+            model = RandomForestClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state,
+                n_jobs=-1
+            )
+    
+    else:  # Regression
+        if algorithm == "Random Forest":
+            model = RandomForestRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state,
+                n_jobs=-1
+            )
+        elif algorithm == "Linear Regression":
+            model = LinearRegression(
+                n_jobs=-1
+            )
+        elif algorithm == "Ridge Regression":
+            model = Ridge(
+                alpha=1.0,
+                random_state=random_state
+            )
+        elif algorithm == "Lasso Regression":
+            model = Lasso(
+                alpha=1.0,
+                random_state=random_state
+            )
+        elif algorithm == "Gradient Boosting":
+            model = GradientBoostingRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state
+            )
+        elif algorithm == "Support Vector Regression (SVR)":
+            model = SVR(
+                kernel='rbf'
+            )
+        elif algorithm == "Decision Tree":
+            model = DecisionTreeRegressor(
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state
+            )
+        elif algorithm == "K-Nearest Neighbors (KNN)":
+            model = KNeighborsRegressor(
+                n_neighbors=min(5, min_samples_leaf),
+                n_jobs=-1
+            )
+        else:
+            model = RandomForestRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=random_state,
+                n_jobs=-1
+            )
+    
+    return model
 
 # Title and description
 st.title("🤖 Machine Learning Model Builder")
@@ -473,9 +623,26 @@ with st.sidebar.expander("🤖 Algorithm Selection"):
         current_model_type = locals().get('model_type', st.session_state.get('last_model_type', 'Classification'))
         
         if current_model_type == "Classification":
-            algorithm_options = ["Random Forest", "Logistic Regression", "Gradient Boosting", "Support Vector Machine"]
+            algorithm_options = [
+                "Random Forest",
+                "Logistic Regression", 
+                "Gradient Boosting",
+                "Support Vector Machine (SVM)",
+                "Decision Tree",
+                "K-Nearest Neighbors (KNN)",
+                "Naive Bayes"
+            ]
         else:
-            algorithm_options = ["Random Forest", "Linear Regression", "Gradient Boosting", "Support Vector Regression"]
+            algorithm_options = [
+                "Random Forest",
+                "Linear Regression",
+                "Ridge Regression",
+                "Lasso Regression",
+                "Gradient Boosting",
+                "Support Vector Regression (SVR)",
+                "Decision Tree",
+                "K-Nearest Neighbors (KNN)"
+            ]
         
         selected_algorithm = st.selectbox(
             "Select Algorithm",
@@ -965,25 +1132,20 @@ if uploaded_file is not None:
                     X_train_scaled = scaler.fit_transform(X_train)
                     X_test_scaled = scaler.transform(X_test)
                     
-                    # Train the model
-                    if model_type == "Classification":
-                        model = RandomForestClassifier(
-                            n_estimators=n_estimators,
-                            max_depth=max_depth,
-                            min_samples_split=min_samples_split,
-                            min_samples_leaf=min_samples_leaf,
-                            random_state=random_state,
-                            n_jobs=-1
-                        )
-                    else:
-                        model = RandomForestRegressor(
-                            n_estimators=n_estimators,
-                            max_depth=max_depth,
-                            min_samples_split=min_samples_split,
-                            min_samples_leaf=min_samples_leaf,
-                            random_state=random_state,
-                            n_jobs=-1
-                        )
+                    # Train the model using selected algorithm from sidebar
+                    selected_algo = st.session_state.settings.get('selected_algorithm', 'Random Forest')
+                    
+                    st.info(f"🤖 Training {selected_algo} model...")
+                    
+                    model = create_model(
+                        algorithm=selected_algo,
+                        model_type=model_type,
+                        n_estimators=n_estimators,
+                        max_depth=max_depth,
+                        min_samples_split=min_samples_split,
+                        min_samples_leaf=min_samples_leaf,
+                        random_state=random_state
+                    )
                     
                     model.fit(X_train_scaled, y_train)
                     
@@ -991,10 +1153,14 @@ if uploaded_file is not None:
                     y_pred = model.predict(X_test_scaled)
                     
                     if model_type == "Classification":
-                        y_pred_proba = model.predict_proba(X_test_scaled)
+                        # Check if model supports probability predictions
+                        if hasattr(model, 'predict_proba'):
+                            y_pred_proba = model.predict_proba(X_test_scaled)
+                        else:
+                            y_pred_proba = None
                     
                     st.session_state.model_trained = True
-                    st.success("✅ Model trained successfully!")
+                    st.success(f"✅ {selected_algo} model trained successfully!")
                     
                     # Store model package in session state for sidebar download
                     st.session_state.model_package = {
@@ -1146,7 +1312,7 @@ if uploaded_file is not None:
                             report_data['classification_report'] = report
                         
                         # ROC Curve (for binary classification)
-                        if len(np.unique(y)) == 2:
+                        if len(np.unique(y)) == 2 and y_pred_proba is not None:
                             st.subheader("📈 ROC Curve")
                             
                             fig, ax = plt.subplots(figsize=(10, 6))
@@ -1337,63 +1503,69 @@ if uploaded_file is not None:
         """
                         report_data['visualizations_html'] = visualizations_html
                     
-                    # Feature Importance
-                    st.subheader("🎯 Feature Importance")
-                    
-                    # Get feature importance
-                    feature_importance = pd.DataFrame({
-                        'feature': selected_features,
-                        'importance': model.feature_importances_
-                    }).sort_values('importance', ascending=False)
-                    
-                    # Apply auto feature selection if enabled
-                    if st.session_state.settings.get('auto_feature_selection', False):
-                        threshold_pct = st.session_state.settings.get('feature_importance_threshold', 1.0)
-                        threshold_val = threshold_pct / 100.0
-                        low_importance = feature_importance[feature_importance['importance'] < threshold_val]
+                    # Feature Importance (only for tree-based models)
+                    if hasattr(model, 'feature_importances_'):
+                        st.subheader("🎯 Feature Importance")
                         
-                        if len(low_importance) > 0:
-                            st.warning(f"⚠️ Auto-selection would remove {len(low_importance)} features with importance < {threshold_pct}%")
-                            with st.expander("View low-importance features"):
-                                st.dataframe(low_importance)
-                    
-                    col1, col2 = st.columns([2, 1])
-                    
-                    with col1:
-                        # Get max features from sidebar setting
-                        max_features = st.session_state.settings.get('max_features_plot', 15)
+                        # Get feature importance
+                        feature_importance = pd.DataFrame({
+                            'feature': selected_features,
+                            'importance': model.feature_importances_
+                        }).sort_values('importance', ascending=False)
                         
-                        fig, ax = plt.subplots(figsize=(10, 6))
-                        plt.style.use(st.session_state.settings.get('plot_style', 'default'))
+                        # Apply auto feature selection if enabled
+                        if st.session_state.settings.get('auto_feature_selection', False):
+                            threshold_pct = st.session_state.settings.get('feature_importance_threshold', 1.0)
+                            threshold_val = threshold_pct / 100.0
+                            low_importance = feature_importance[feature_importance['importance'] < threshold_val]
+                            
+                            if len(low_importance) > 0:
+                                st.warning(f"⚠️ Auto-selection would remove {len(low_importance)} features with importance < {threshold_pct}%")
+                                with st.expander("View low-importance features"):
+                                    st.dataframe(low_importance)
                         
-                        plt.barh(
-                            feature_importance['feature'][:max_features],
-                            feature_importance['importance'][:max_features]
-                        )
-                        plt.xlabel('Importance')
-                        plt.title(f'Top {max_features} Feature Importances')
-                        plt.gca().invert_yaxis()
-                        plt.tight_layout()
-                        st.pyplot(fig)
+                        col1, col2 = st.columns([2, 1])
                         
-                        # Store feature importance plot for HTML report
-                        feature_imp_img = fig_to_base64(fig)
-                        plt.close(fig)
-                    
-                    with col2:
-                        st.dataframe(
-                            feature_importance,
-                            height=400
-                        )
-                    
-                    # Build feature importance HTML
-                    feature_imp_table_rows = ''.join([
-                        f"<tr><td>{row['feature']}</td><td>{row['importance']:.4f}</td></tr>"
-                        for _, row in feature_importance.head(10).iterrows()
-                    ])
-                    
-                    report_data['feature_importance_plot'] = f'<div class="img-container"><img src="data:image/png;base64,{feature_imp_img}" alt="Feature Importance"></div>'
-                    report_data['feature_importance_table'] = feature_imp_table_rows
+                        with col1:
+                            # Get max features from sidebar setting
+                            max_features = st.session_state.settings.get('max_features_plot', 15)
+                            
+                            fig, ax = plt.subplots(figsize=(10, 6))
+                            plt.style.use(st.session_state.settings.get('plot_style', 'default'))
+                            
+                            plt.barh(
+                                feature_importance['feature'][:max_features],
+                                feature_importance['importance'][:max_features]
+                            )
+                            plt.xlabel('Importance')
+                            plt.title(f'Top {max_features} Feature Importances')
+                            plt.gca().invert_yaxis()
+                            plt.tight_layout()
+                            st.pyplot(fig)
+                            
+                            # Store feature importance plot for HTML report
+                            feature_imp_img = fig_to_base64(fig)
+                            plt.close(fig)
+                        
+                        with col2:
+                            st.dataframe(
+                                feature_importance,
+                                height=400
+                            )
+                        
+                        # Build feature importance HTML
+                        feature_imp_table_rows = ''.join([
+                            f"<tr><td>{row['feature']}</td><td>{row['importance']:.4f}</td></tr>"
+                            for _, row in feature_importance.head(10).iterrows()
+                        ])
+                        
+                        report_data['feature_importance_plot'] = f'<div class="img-container"><img src="data:image/png;base64,{feature_imp_img}" alt="Feature Importance"></div>'
+                        report_data['feature_importance_table'] = feature_imp_table_rows
+                    else:
+                        st.info(f"ℹ️ Feature importance is not available for {selected_algo}. This metric is only available for tree-based models.")
+                        # Provide empty placeholders for HTML report
+                        report_data['feature_importance_plot'] = '<div class="img-container"><p>Feature importance not available for this algorithm.</p></div>'
+                        report_data['feature_importance_table'] = '<tr><td colspan="2">Not available for this algorithm</td></tr>'
                     
                     # Cross-validation scores
                     st.subheader("🔄 Cross-Validation Scores")
